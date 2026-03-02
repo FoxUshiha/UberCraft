@@ -229,9 +229,9 @@ Prerequisites
 
 ✅ Java 17 or higher
 
-✅ CoinCard plugin installed
+✅ CoinCard plugin installed  https://www.spigotmc.org/resources/coin-card.129770/
 
-✅ (Optional) Vault for integrations
+✅ (Optional) Vault for integrations   https://www.zrips.net/cmivault/
 
 Thanks for downloading!!!
 
