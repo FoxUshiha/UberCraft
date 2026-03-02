@@ -1,0 +1,52 @@
+# UberCraft Configuration
+Server_Card: "e1301fadfc35"  # Server card to receive and pay Uber payments
+
+# Amount paid for each block traveled
+Distance_Worth: 0.00000001
+
+# Message Configuration
+messages:
+  prefix: "&8[&5UberCraft&8]"
+  no-permission: "&cYou don't have permission to use this command!"
+  
+  # GUI Titles
+  uber-gui-title: "&6&lUber Requests"
+  warp-gui-title: "&6&lSelect Destination Warp"
+  
+  # Compass
+  uber-compass-pickup: "&6&lUber Compass &7- Pickup %player%"
+  uber-compass-destination: "&6&lUber Compass &7- %player%'s Destination"
+  uber-compass-lore: "&7Follow this compass"
+  
+  # Request messages
+  request-created: "&aUber requested! Price: &6%price%"
+  request-waiting: "&7Waiting for an Uber to accept..."
+  request-expired: "&cYour Uber request expired! &cYou Should call a new one."
+  
+  # Ride messages
+  ride-accepted: "&a%uber% accepted your ride!"
+  ride-pickup: "&7They are on their way to pick you up."
+  ride-arrived: "&aThe Uber has arrived! Right-click to board."
+  ride-board: "&7After boarding, they will take you to your destination."
+  ride-enroute: "&aYou have arrived! Tell the player to board."
+  ride-destination: "&7The compass now points to the destination."
+  ride-completed: "&aRide completed! You received: &6%price%"
+  ride-cancelled: "&cRide cancelled!"
+  
+  # Refund messages
+  refund-issued: "&aRefund issued: &6%price%"
+  
+  # Warp messages
+  warp-created: "&aWarp &6%name% &acreated!"
+  warp-removed: "&aWarp &6%name% &aremoved!"
+  warp-not-found: "&cWarp not found!"
+  
+  # Error messages
+  error-insufficient-balance: "&cInsufficient balance! Need: &6%need% &cHave: &6%have%"
+  error-no-card: "&cYou don't have a card set! Use /coin card <card>"
+  error-active-request: "&cYou already have an active Uber request!"
+  error-active-ride: "&cYou are already in an Uber ride!"
+  error-player-offline: "&cThe player is no longer online!"
+  error-wrong-world: "&cYou must be in the same world as the destination!"
+  error-invalid-coordinates: "&cInvalid coordinates!"
+  error-hold-item: "&cYou must hold an item to use as warp icon!"
