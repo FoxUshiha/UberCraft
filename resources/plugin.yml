@@ -1,5 +1,5 @@
 name: UberCraft
-version: 1.5
+version: 1.6
 main: com.foxsrv.ubercraft.UberCraft
 api-version: 1.20
 depend: [CoinCard]

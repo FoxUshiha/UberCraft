@@ -299,8 +299,15 @@ public class UberCraft extends JavaPlugin implements Listener {
                     Inventory inv = Bukkit.createInventory(null, 54, 
                         colorize(getConfig().getString("messages.warp-gui-title", "&6&lSelect Destination Warp")));
                     
+                    String currentWorld = player.getWorld().getName();
+                    
                     for (Warp warp : warps.values()) {
-                        ItemStack icon = warp.getIcon();
+                        // Only show warps from the same world
+                        if (!warp.getWorldName().equals(currentWorld)) {
+                            continue;
+                        }
+                        
+                        ItemStack icon = warp.getIcon().clone();
                         ItemMeta meta = icon.getItemMeta();
                         
                         meta.setDisplayName(colorize("&6&l" + warp.getName()));
@@ -328,6 +335,19 @@ public class UberCraft extends JavaPlugin implements Listener {
                         icon.setItemMeta(meta);
                         
                         inv.addItem(icon);
+                    }
+                    
+                    // If no warps in this world, add a placeholder
+                    if (inv.firstEmpty() == 0) {
+                        ItemStack noWarps = new ItemStack(Material.BARRIER);
+                        ItemMeta meta = noWarps.getItemMeta();
+                        meta.setDisplayName(colorize("&c&lNo Warps Available"));
+                        List<String> lore = new ArrayList<>();
+                        lore.add(colorize("&7There are no warps configured"));
+                        lore.add(colorize("&7for this world."));
+                        meta.setLore(lore);
+                        noWarps.setItemMeta(meta);
+                        inv.setItem(22, noWarps);
                     }
                     
                     new BukkitRunnable() {
@@ -422,23 +442,12 @@ public class UberCraft extends JavaPlugin implements Listener {
                     break;
                     
                 case "warp":
-                    if (args.length == 1) {
-                        // Open warp selection menu
-                        if (!player.hasPermission("uber.player")) {
-                            player.sendMessage(colorize(getPrefix() + getConfig().getString("messages.no-permission")));
-                            return true;
-                        }
-                        new MenuManager().openWarpMenu(player);
-                    } else {
-                        // Handle warp name
-                        String warpName = args[1];
-                        Warp warp = warps.get(warpName.toLowerCase());
-                        if (warp == null) {
-                            player.sendMessage(colorize(getPrefix() + " &cWarp not found!"));
-                            return true;
-                        }
-                        handleWarpRequest(player, warp);
+                    if (!player.hasPermission("uber.player")) {
+                        player.sendMessage(colorize(getPrefix() + getConfig().getString("messages.no-permission")));
+                        return true;
                     }
+                    // Always open warp selection menu
+                    new MenuManager().openWarpMenu(player);
                     break;
                     
                 case "admin":
@@ -469,7 +478,6 @@ public class UberCraft extends JavaPlugin implements Listener {
             player.sendMessage(colorize("&6=== UberCraft v1.0 ==="));
             player.sendMessage(colorize("&7/uber x y z [world] &f- Request Uber to coordinates"));
             player.sendMessage(colorize("&7/uber warp &f- Open warp selection menu"));
-            player.sendMessage(colorize("&7/uber warp <name> &f- Request Uber to specific warp"));
             player.sendMessage(colorize("&7/uber cancel &f- Cancel your current Uber"));
             if (player.hasPermission("uber.admin")) {
                 player.sendMessage(colorize("&7/uber admin set <name> &f- Create a warp with item in hand"));
@@ -570,7 +578,7 @@ public class UberCraft extends JavaPlugin implements Listener {
             }
         }
         
-        private void handleWarpRequest(Player player, Warp warp) {
+        public void handleWarpRequest(Player player, Warp warp) {
             createUberRequest(player, warp.getLocation(), "Warp: " + warp.getName());
         }
         
@@ -616,8 +624,6 @@ public class UberCraft extends JavaPlugin implements Listener {
                     completions.add("admin");
                 }
                 completions.add("cancel");
-            } else if (args.length == 2 && args[0].equalsIgnoreCase("warp")) {
-                completions.addAll(warps.keySet());
             } else if (args.length == 2 && args[0].equalsIgnoreCase("admin")) {
                 if (sender.hasPermission("uber.admin")) {
                     completions.add("set");
@@ -807,7 +813,7 @@ public class UberCraft extends JavaPlugin implements Listener {
             
             // Pay Uber (if any)
             if (uberPayment.compareTo(BigDecimal.ZERO) > 0 && uber != null && uber.isOnline()) {
-                final BigDecimal finalUberPayment = uberPayment; // Create final copy for inner class
+                final BigDecimal finalUberPayment = uberPayment;
                 addToPaymentQueue(serverCard, getPlayerCard(uberUUID), finalUberPayment, "CANCEL_UBER_PAY", 
                     new PaymentCallback() {
                         @Override
@@ -832,8 +838,8 @@ public class UberCraft extends JavaPlugin implements Listener {
             // Refund player
             Player ridePlayer = Bukkit.getPlayer(playerUUID);
             if (ridePlayer != null && ridePlayer.isOnline()) {
-                final BigDecimal finalPlayerRefund = playerRefund; // Create final copy for inner class
-                final CancelType finalCancelType = cancelType; // Create final copy for inner class
+                final BigDecimal finalPlayerRefund = playerRefund;
+                final CancelType finalCancelType = cancelType;
                 
                 String refundMessage;
                 if (cancelType == CancelType.PLAYER_CANCELLED) {
@@ -841,7 +847,7 @@ public class UberCraft extends JavaPlugin implements Listener {
                 } else {
                     refundMessage = " &aRide cancelled by Uber! Refunded (90%): &6" + formatCoin(finalPlayerRefund);
                 }
-                final String finalRefundMessage = refundMessage; // Create final copy for inner class
+                final String finalRefundMessage = refundMessage;
                 
                 addToPaymentQueue(serverCard, getPlayerCard(playerUUID), finalPlayerRefund, "CANCEL_PLAYER_REFUND", 
                     new PaymentCallback() {
@@ -917,13 +923,21 @@ public class UberCraft extends JavaPlugin implements Listener {
                     public void run() {
                         processUberAccept(player, finalPlayerName);
                     }
-                }.runTaskAsynchronously(UberCraft.this); // CORRIGIDO: this se refere à instância do plugin
+                }.runTaskAsynchronously(UberCraft.this);
             }
         } else if (title.equals(warpGuiTitle)) {
             event.setCancelled(true);
             
-            if (event.getCurrentItem() != null) {
+            if (event.getCurrentItem() != null && event.getCurrentItem().getType() != Material.AIR) {
                 ItemStack item = event.getCurrentItem();
+                
+                // Check if it's the "No Warps" placeholder
+                if (item.getType() == Material.BARRIER) {
+                    player.closeInventory();
+                    player.sendMessage(colorize(getPrefix() + " &cNo warps available in this world!"));
+                    return;
+                }
+                
                 if (!item.hasItemMeta() || item.getItemMeta().getDisplayName() == null) return;
                 
                 String displayName = item.getItemMeta().getDisplayName();
@@ -931,9 +945,16 @@ public class UberCraft extends JavaPlugin implements Listener {
                 
                 Warp warp = warps.get(warpName);
                 if (warp != null) {
+                    // Check if warp is in same world
+                    if (!warp.getWorldName().equals(player.getWorld().getName())) {
+                        player.sendMessage(colorize(getPrefix() + " &cThis warp is in a different world!"));
+                        player.closeInventory();
+                        return;
+                    }
+                    
                     // Process warp selection
-                    new UberCommand().handleWarpRequest(player, warp);
                     player.closeInventory();
+                    new UberCommand().handleWarpRequest(player, warp);
                 }
             }
         }
@@ -1236,7 +1257,7 @@ public class UberCraft extends JavaPlugin implements Listener {
                     expirationTasks.remove(requestId);
                 }
             }
-        }.runTaskLater(this, 6000L); // 60 seconds = 1200 ticks
+        }.runTaskLater(this, 1200L); // 60 seconds = 1200 ticks (corrigido de 6000L para 1200L)
         
         expirationTasks.put(requestId, task);
     }
