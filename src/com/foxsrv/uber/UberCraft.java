@@ -964,7 +964,31 @@ public class UberCraft extends JavaPlugin implements Listener {
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
         
-        // Quick check if player has compass
+        // ====== PASSENGER COMPLETION CHECK (NEW) ======
+        // Check if this player is a passenger in an active ride and has boarded
+        for (Map.Entry<UUID, UberRide> entry : activeRides.entrySet()) {
+            UberRide ride = entry.getValue();
+            if (ride.getPlayerUUID().equals(player.getUniqueId()) && ride.hasPlayerBoarded()) {
+                Location dest = ride.getDestinationLocation();
+                // Check if passenger is within 8 blocks of destination
+                if (player.getWorld().equals(dest.getWorld()) && player.getLocation().distance(dest) <= 8.0) {
+                    // Complete the ride
+                    Player uber = Bukkit.getPlayer(ride.getUberUUID());
+                    if (uber != null && uber.isOnline()) {
+                        completeRide(uber, ride, entry.getKey());
+                    } else {
+                        // Uber offline - complete anyway, pay via queue later if needed
+                        activeRides.remove(entry.getKey());
+                        if (uber != null) removeCompass(uber);
+                        player.sendMessage(colorize(getPrefix() + " &aRide completed! (Uber offline)"));
+                        getLogger().warning("Uber " + ride.getUberName() + " offline when passenger completed ride.");
+                    }
+                    break;
+                }
+            }
+        }
+        
+        // ====== UBER COMPASS AND PICKUP LOGIC (unchanged) ======
         if (!compassTargets.containsKey(player.getUniqueId())) {
             return;
         }
@@ -991,7 +1015,7 @@ public class UberCraft extends JavaPlugin implements Listener {
         
         double distance = player.getLocation().distance(target.getLocation());
         
-        // Handle different stages
+        // Only handle PICKUP stage here (destination completion is now handled by passenger)
         if (target.getType() == CompassTarget.TargetType.PICKUP) {
             // Going to pickup the player
             if (distance < 5) {
@@ -1018,13 +1042,8 @@ public class UberCraft extends JavaPlugin implements Listener {
                     player.sendMessage(colorize(getPrefix() + " &cThe player is no longer online. Ride cancelled."));
                 }
             }
-        } else if (target.getType() == CompassTarget.TargetType.DESTINATION) {
-            // Going to destination
-            if (ride.hasPlayerBoarded() && distance < 5) {
-                // Arrived at destination - complete ride
-                completeRide(player, ride, target.getRideId());
-            }
         }
+        // NOTE: The DESTINATION arrival block has been REMOVED - completion is now passenger-based
     }
     
     @EventHandler
@@ -1257,7 +1276,7 @@ public class UberCraft extends JavaPlugin implements Listener {
                     expirationTasks.remove(requestId);
                 }
             }
-        }.runTaskLater(this, 1200L); // 60 seconds = 1200 ticks (corrigido de 6000L para 1200L)
+        }.runTaskLater(this, 1200L); // 60 seconds = 1200 ticks
         
         expirationTasks.put(requestId, task);
     }
